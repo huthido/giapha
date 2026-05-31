@@ -1,34 +1,32 @@
 # Garage — triển khai độc lập, Coolify project riêng
 #
-# Coolify setup:
-#   1. New Project → Docker Compose → chọn file này
-#   2. Set env var: GARAGE_RPC_SECRET=$(openssl rand -hex 32)
-#   3. Expose port 3900 → domain: s3.your-domain.com
+# Coolify env vars cần set:
+#   GARAGE_RPC_SECRET=$(openssl rand -hex 32)
 #
 # Sau lần deploy đầu tiên:
-#   docker compose -f docker-compose.garage.yaml exec garage sh /scripts/garage-init.sh
-#
-# Điền vào server/.env của app:
-#   GARAGE_ENDPOINT=https://s3.your-domain.com
-#   GARAGE_PUBLIC_URL=https://s3.your-domain.com/giapha
-#   GARAGE_KEY_ID=GK...
-#   GARAGE_SECRET_KEY=...
-#   GARAGE_BUCKET=giapha
+#   docker exec <container> garage node id
+#   docker exec <container> garage layout assign <NODE_ID> --zone dc1 --capacity 100G
+#   docker exec <container> garage layout apply --version 1
+#   docker exec <container> garage bucket create giapha
+#   docker exec <container> garage bucket allow giapha --read --anonymous
+#   docker exec <container> garage key create giapha-key
+#   docker exec <container> garage key info giapha-key        ← copy Key ID + Secret
+#   docker exec <container> garage bucket allow giapha --read --write --key giapha-key
 
 services:
   garage:
     image: dxflrs/garage:v1.3.1
     environment:
-      # Garage v1.3 đọc env var này và override rpc_secret trong file config.
-      # Set giá trị thực trong Coolify: openssl rand -hex 32
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?Set GARAGE_RPC_SECRET in Coolify env vars}
+    configs:
+      - source: garage_cfg
+        target: /etc/garage.toml
+        mode: 0444
     volumes:
-      - ./garage/garage.toml:/etc/garage.toml:ro
-      - ./scripts/garage-init.sh:/scripts/garage-init.sh:ro
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
     ports:
-      - "3900:3900"   # S3 API — expose ra s3.your-domain.com
+      - "3900:3900"   # S3 API → s3.your-domain.com
       - "3902:3902"   # Web endpoint (tuỳ chọn)
       - "3903:3903"   # Admin
     restart: unless-stopped
@@ -38,6 +36,30 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+configs:
+  garage_cfg:
+    content: |
+      metadata_dir = "/var/lib/garage/meta"
+      data_dir     = "/var/lib/garage/data"
+      db_engine    = "lmdb"
+
+      replication_factor = 1
+      rpc_bind_addr      = "[::]:3901"
+      rpc_secret         = "${GARAGE_RPC_SECRET}"
+
+      [s3_api]
+      s3_region                   = "garage"
+      api_bind_addr               = "[::]:3900"
+      allow_unauthenticated_reads = true
+
+      [s3_web]
+      bind_addr   = "[::]:3902"
+      root_domain = ".web.localhost"
+      index       = "index.html"
+
+      [admin]
+      api_bind_addr = "[::]:3903"
 
 volumes:
   garage_meta:
