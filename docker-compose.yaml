@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: Dockerfile.server
     env_file:
-      - ./server/.env
+      - .env
     environment:
       NODE_ENV: production
     volumes:

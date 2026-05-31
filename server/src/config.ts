@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load server/.env regardless of the process CWD (dev runs from server/, the
-// root `start` script runs from the repo root) — __dirname is server/src in
-// dev and server/dist after build, so ../.env resolves to server/.env in both.
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+// Tìm .env ở thư mục gốc của project.
+// Dev:  __dirname = server/src/   → ../../.env = project root
+// Prod: __dirname = server/dist/  → ../../.env = project root (WORKDIR /app)
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
 function required(name: string): string {
   const value = process.env[name];
