@@ -1,0 +1,23 @@
+metadata_dir = "/var/lib/garage/meta"
+data_dir     = "/var/lib/garage/data"
+db_engine    = "lmdb"
+
+replication_factor = 1
+rpc_bind_addr      = "[::]:3901"
+
+# Giá trị này bị override tại runtime bởi env var GARAGE_RPC_SECRET (set trong Coolify).
+# Không cần sửa file này.
+rpc_secret = "placeholder-overridden-by-env-var"
+
+[s3_api]
+s3_region                   = "garage"
+api_bind_addr               = "[::]:3900"
+allow_unauthenticated_reads = true
+
+[s3_web]
+bind_addr   = "[::]:3902"
+root_domain = ".web.localhost"
+index       = "index.html"
+
+[admin]
+api_bind_addr = "[::]:3903"

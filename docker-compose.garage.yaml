@@ -8,7 +8,7 @@
 # Sau lần deploy đầu tiên:
 #   docker compose -f docker-compose.garage.yaml exec garage sh /scripts/garage-init.sh
 #
-# Sau đó điền vào server/.env của app:
+# Điền vào server/.env của app:
 #   GARAGE_ENDPOINT=https://s3.your-domain.com
 #   GARAGE_PUBLIC_URL=https://s3.your-domain.com/giapha
 #   GARAGE_KEY_ID=GK...
@@ -16,57 +16,19 @@
 #   GARAGE_BUCKET=giapha
 
 services:
-
-  # Sinh garage.toml từ env var vào named volume, chạy một lần rồi thoát
-  garage-config:
-    image: busybox:latest
-    restart: "no"
-    volumes:
-      - garage_config:/config
-    environment:
-      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?Cần set GARAGE_RPC_SECRET, ví dụ: openssl rand -hex 32}
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        cat > /config/garage.toml << EOF
-        metadata_dir = "/var/lib/garage/meta"
-        data_dir     = "/var/lib/garage/data"
-        db_engine    = "lmdb"
-
-        replication_factor = 1
-        rpc_bind_addr      = "[::]:3901"
-        rpc_secret         = "$$GARAGE_RPC_SECRET"
-
-        [s3_api]
-        s3_region                = "garage"
-        api_bind_addr            = "[::]:3900"
-        allow_unauthenticated_reads = true
-
-        [s3_web]
-        bind_addr   = "[::]:3902"
-        root_domain = ".web.localhost"
-        index       = "index.html"
-
-        [admin]
-        api_bind_addr = "[::]:3903"
-        EOF
-        echo "garage.toml generated OK"
-
   garage:
     image: dxflrs/garage:v1.3.1
-    depends_on:
-      garage-config:
-        condition: service_completed_successfully
-    # --config phải đứng trước subcommand "server"
-    command: ["--config", "/config/garage.toml", "server"]
+    environment:
+      # Garage v1.3 đọc env var này và override rpc_secret trong file config.
+      # Set giá trị thực trong Coolify: openssl rand -hex 32
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?Set GARAGE_RPC_SECRET in Coolify env vars}
     volumes:
-      - garage_config:/config:ro
+      - ./garage/garage.toml:/etc/garage.toml:ro
       - ./scripts/garage-init.sh:/scripts/garage-init.sh:ro
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
     ports:
-      - "3900:3900"   # S3 API
+      - "3900:3900"   # S3 API — expose ra s3.your-domain.com
       - "3902:3902"   # Web endpoint (tuỳ chọn)
       - "3903:3903"   # Admin
     restart: unless-stopped
@@ -78,6 +40,5 @@ services:
       start_period: 20s
 
 volumes:
-  garage_config:
   garage_meta:
   garage_data:
