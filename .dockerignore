@@ -12,5 +12,5 @@
 garage/garage.toml
 garage/meta
 garage/data
-docker-compose.override.yml
-docker-compose.garage.yml
+docker-compose.override.yaml
+docker-compose.garage.yaml
