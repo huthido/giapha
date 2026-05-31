@@ -17,7 +17,7 @@
 
 services:
   garage:
-    image: dxflrs/garage:v1.0
+    image: dxflrs/garage:latest
     volumes:
       - ./garage/garage.toml:/etc/garage.toml:ro
       - ./scripts/garage-init.sh:/scripts/garage-init.sh:ro
