@@ -1,0 +1,11 @@
+# Override cho local development — tự động merge vào docker-compose.yml
+# Không cần file này trong Coolify.
+
+services:
+  nginx:
+    ports:
+      - "80:80"       # truy cập app tại http://localhost
+
+  server:
+    ports:
+      - "5109:5109"   # debug trực tiếp: http://localhost:5109/api/...

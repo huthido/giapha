@@ -1,0 +1,46 @@
+services:
+
+  # ── Nginx: phục vụ React SPA + reverse proxy ──────────────────────────────
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+      args:
+        # Để trống → OAuth dùng URL tương đối qua nginx proxy.
+        # Ghi đè nếu cần: VITE_SERVER_URL: https://your-domain.com
+        VITE_SERVER_URL: ""
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - app
+
+  # ── Server: Node.js API ───────────────────────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    env_file:
+      - ./server/.env
+    environment:
+      NODE_ENV: production
+    volumes:
+      - server_data:/app/data        # SQLite database
+      - server_uploads:/app/uploads  # Local fallback (khi Garage chưa cấu hình)
+    restart: unless-stopped
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5109/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  server_data:
+  server_uploads:
+
+networks:
+  app:
+    driver: bridge

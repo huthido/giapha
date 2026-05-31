@@ -1,0 +1,16 @@
+**/node_modules
+**/.pnpm-store
+**/dist
+**/.env
+**/*.env
+**/data
+**/uploads
+**/*.log
+**/.git
+**/.gitignore
+**/CTempgiapha*
+garage/garage.toml
+garage/meta
+garage/data
+docker-compose.override.yml
+docker-compose.garage.yml

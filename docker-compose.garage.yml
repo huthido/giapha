@@ -1,0 +1,40 @@
+# Garage — triển khai độc lập, Coolify project riêng
+#
+# Coolify setup:
+#   1. New Project → Docker Compose → chọn file này
+#   2. Expose port 3900 → đặt domain: s3.your-domain.com
+#   3. (Tuỳ chọn) Expose port 3902 → đặt domain: media.your-domain.com
+#
+# Sau lần deploy đầu tiên:
+#   docker compose -f docker-compose.garage.yml exec garage sh /scripts/garage-init.sh
+#
+# Sau đó điền vào server/.env của app:
+#   GARAGE_ENDPOINT=https://s3.your-domain.com
+#   GARAGE_PUBLIC_URL=https://s3.your-domain.com/giapha    ← path-style, không cần media subdomain
+#   GARAGE_KEY_ID=GK...
+#   GARAGE_SECRET_KEY=...
+#   GARAGE_BUCKET=giapha
+
+services:
+  garage:
+    image: dxflrs/garage:v1.0
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - ./scripts/garage-init.sh:/scripts/garage-init.sh:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    ports:
+      - "3900:3900"   # S3 API — Coolify expose ra s3.your-domain.com
+      - "3902:3902"   # Web endpoint — nếu muốn media.your-domain.com (tuỳ chọn)
+      - "3903:3903"   # Admin (chỉ dùng nội bộ, không expose ra ngoài)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3903/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  garage_meta:
+  garage_data:
