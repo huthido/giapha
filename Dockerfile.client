@@ -12,12 +12,6 @@ COPY client/ ./
 ARG VITE_SERVER_URL=""
 ENV VITE_SERVER_URL=${VITE_SERVER_URL}
 
-# Diagnostic: kiểm tra môi trường trước khi build
-RUN node --version && pnpm --version
-RUN ls node_modules | grep -E "^(vite|rollup|esbuild)" | head -10
-RUN pnpm exec vite --version
-
-# Build
 RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
 # ─── Stage 2: Nginx serving static files ─────────────────────────────────────

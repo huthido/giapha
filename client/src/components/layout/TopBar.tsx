@@ -48,6 +48,7 @@ export function TopBar({ title }: { title?: string }) {
   };
 
   return (
+    <>
     <header className="min-h-14 pt-[env(safe-area-inset-top)] bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center px-4 sm:px-6 gap-2 sm:gap-4 sticky top-0 z-10">
       {title && <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">{title}</h2>}
       <div className="flex-1" />
@@ -92,7 +93,7 @@ export function TopBar({ title }: { title?: string }) {
         )}
       </div>
     </header>
-
     <MemberSearch open={showSearch} onClose={() => setShowSearch(false)} />
+    </>
   );
 }
