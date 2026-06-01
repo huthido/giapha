@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { X, Lock, Eye, GitBranch } from 'lucide-react';
 import type { FamilyNode, Relationship } from '../types';
 import { computeFamilyLayout, NODE_R } from '../lib/familyLayout';
@@ -28,7 +28,6 @@ interface Transform { x: number; y: number; scale: number; }
 
 export function SharedTree() {
   const { token } = useParams<{ token: string }>();
-  const [searchParams] = useSearchParams();
 
   const [data, setData] = useState<ShareData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,8 +41,10 @@ export function SharedTree() {
     if (!token) return;
     setSubmitting(true);
     try {
-      const url = `${SERVER}/api/shares/view/${token}${pw ? `?password=${encodeURIComponent(pw)}` : ''}`;
-      const res = await fetch(url);
+      const url = `${SERVER}/api/shares/view/${token}`;
+      const headers: Record<string, string> = {};
+      if (pw) headers['X-Share-Password'] = pw;
+      const res = await fetch(url, { headers });
       const json = await res.json();
       if (!res.ok) {
         if (json.requires_password) { setRequiresPassword(true); setPwError(pw ? 'Mật khẩu không đúng' : ''); }
@@ -61,10 +62,9 @@ export function SharedTree() {
   }, [token]);
 
   useEffect(() => {
-    const pw = searchParams.get('password') ?? undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchTree(pw);
-  }, [fetchTree, searchParams]);
+    fetchTree();
+  }, [fetchTree]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-950 dark:to-gray-900">

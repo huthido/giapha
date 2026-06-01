@@ -30,10 +30,10 @@ function subtreeUserIds(rootUserId: string, edges: { user_id: string; related_us
 router.post('/', verifyJWT, async (req: AuthRequest, res: Response): Promise<void> => {
   const { title, branch_id, password, expires_days } = req.body;
 
-  // Validate branch thuộc quyền quản lý nếu có
+  // Fix IDOR: chỉ cho phép nhánh do chính người dùng tạo
   if (branch_id) {
-    const branch = db.prepare('SELECT id FROM branches WHERE id = ?').get(branch_id);
-    if (!branch) { res.status(400).json({ error: 'Nhánh không tồn tại' }); return; }
+    const branch = db.prepare('SELECT id FROM branches WHERE id = ? AND created_by = ?').get(branch_id, req.userId);
+    if (!branch) { res.status(403).json({ error: 'Nhánh không tồn tại hoặc bạn không có quyền' }); return; }
   }
 
   const id = uuidv4();
@@ -79,7 +79,7 @@ router.delete('/:id', verifyJWT, (req: AuthRequest, res: Response): void => {
 });
 
 // GET /api/shares/view/:token — xem cây (public)
-// Query: ?password=xxx (nếu share có mật khẩu)
+// Password qua header X-Share-Password (không dùng query string để tránh lộ trong logs)
 router.get('/view/:token', async (req: Request, res: Response): Promise<void> => {
   const share = db.prepare(`
     SELECT s.*, u.name AS creator_name, b.root_user_id
@@ -95,9 +95,9 @@ router.get('/view/:token', async (req: Request, res: Response): Promise<void> =>
     res.status(410).json({ error: 'Link chia sẻ đã hết hạn' }); return;
   }
 
-  // Kiểm tra mật khẩu
+  // Fix password-in-query: đọc từ header X-Share-Password
   if (share.password_hash) {
-    const pw = (req.query.password as string) ?? '';
+    const pw = (req.headers['x-share-password'] as string) ?? '';
     if (!pw) { res.status(401).json({ error: 'Cần mật khẩu', requires_password: true }); return; }
     const ok = await bcrypt.compare(pw, share.password_hash);
     if (!ok) { res.status(401).json({ error: 'Mật khẩu không đúng', requires_password: true }); return; }
@@ -127,13 +127,16 @@ router.get('/view/:token', async (req: Request, res: Response): Promise<void> =>
     JOIN family_nodes fn2 ON fn2.user_id = r.related_user_id
   `).all() as any[];
 
-  // Lọc theo nhánh nếu có
-  let nodes = allNodes;
-  let edges = allEdges;
+  // Fix multi-tenant leak: luôn giới hạn về gia đình của người tạo share (BFS từ creator)
+  const creatorIds = subtreeUserIds(share.created_by, allEdges);
+  let nodes = allNodes.filter((n: any) => creatorIds.has(n.user_id));
+  let edges = allEdges.filter((e: any) => creatorIds.has(e.user_id) && creatorIds.has(e.related_user_id));
+
+  // Lọc thêm theo nhánh nếu có
   if (share.root_user_id) {
-    const visibleIds = subtreeUserIds(share.root_user_id, allEdges);
-    nodes = allNodes.filter((n: any) => visibleIds.has(n.user_id));
-    edges = allEdges.filter((e: any) => visibleIds.has(e.user_id) && visibleIds.has(e.related_user_id));
+    const branchIds = subtreeUserIds(share.root_user_id, edges);
+    nodes = nodes.filter((n: any) => branchIds.has(n.user_id));
+    edges = edges.filter((e: any) => branchIds.has(e.user_id) && branchIds.has(e.related_user_id));
   }
 
   // Tăng view count
