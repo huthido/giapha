@@ -12,13 +12,12 @@ RUN pnpm install --frozen-lockfile
 
 COPY client/ ./client/
 
-# VITE_SERVER_URL="" → OAuth dùng URL tương đối (/api/auth/google)
-# nên hoạt động qua nginx proxy dù triển khai ở bất kỳ domain nào.
-# Ghi đè tại build time nếu cần: --build-arg VITE_SERVER_URL=https://your-domain.com
 ARG VITE_SERVER_URL=""
 ENV VITE_SERVER_URL=${VITE_SERVER_URL}
 
-RUN pnpm --filter client run build
+# Build từ thư mục client để vite.config.ts được tìm thấy đúng chỗ
+WORKDIR /build/client
+RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
 
 # ─── Stage 2: Nginx serving static files ─────────────────────────────────────
 FROM nginx:1.27-alpine
