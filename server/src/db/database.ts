@@ -107,6 +107,29 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_branches_root ON branches(root_user_id);
 `);
 
+// Migration: invite_tokens table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS invite_tokens (
+    id TEXT PRIMARY KEY,
+    token TEXT UNIQUE NOT NULL,
+    created_by TEXT NOT NULL,
+    relation_type TEXT,
+    invitee_name TEXT,
+    invitee_dob TEXT,
+    invitee_gender TEXT,
+    message TEXT,
+    expires_at TEXT NOT NULL,
+    used_by TEXT,
+    used_at TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (used_by)    REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_invite_token   ON invite_tokens(token);
+  CREATE INDEX IF NOT EXISTS idx_invite_creator ON invite_tokens(created_by);
+`);
+
 // Migration: events table
 db.exec(`
   CREATE TABLE IF NOT EXISTS events (

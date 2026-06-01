@@ -14,6 +14,7 @@ import { Albums } from './pages/Albums';
 import { Events } from './pages/Events';
 import { Admin } from './pages/Admin';
 import { AuthCallback } from './pages/AuthCallback';
+import { Join } from './pages/Join';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
       <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/join" element={<Join />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

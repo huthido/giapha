@@ -22,7 +22,13 @@ export function AuthCallback() {
     // Lưu token tạm, fetch user info rồi login
     localStorage.setItem('giapha_token', token);
     api.get<User>('/auth/me')
-      .then(user => {
+      .then(async user => {
+        // Nếu trước đó có pending invite (từ trang /join), tự động accept
+        const pendingInvite = localStorage.getItem('pending_invite');
+        if (pendingInvite) {
+          localStorage.removeItem('pending_invite');
+          try { await api.post(`/invites/accept/${pendingInvite}`); } catch { /* invite may already be accepted */ }
+        }
         login(token, user);
         navigate('/', { replace: true });
       })
@@ -30,7 +36,7 @@ export function AuthCallback() {
         localStorage.removeItem('giapha_token');
         navigate('/login?error=oauth_failed', { replace: true });
       });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-950 dark:to-gray-900">

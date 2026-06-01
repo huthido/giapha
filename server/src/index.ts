@@ -20,6 +20,7 @@ import notificationRoutes from './routes/notifications';
 import uploadRoutes from './routes/upload';
 import eventRoutes from './routes/events';
 import branchRoutes from './routes/branches';
+import inviteRoutes from './routes/invites';
 
 import { registerChatHandlers } from './socket/chatHandler';
 import { registerCallHandlers } from './socket/callHandler';
@@ -76,6 +77,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/branches', branchRoutes);
+app.use('/api/invites', inviteRoutes);
 
 // Centralized error handler — turns multer / thrown route errors into clean JSON
 // instead of the default HTML 500 (which the JSON-only client can't parse).

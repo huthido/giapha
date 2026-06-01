@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Users, Bell, Baby, GitFork, SearchCode } from 'lucide-react';
+import { Plus, Users, Bell, Baby, GitFork, SearchCode, UserPlus } from 'lucide-react';
 import { AppLayout } from '../components/layout/AppLayout';
 import { TreeCanvas } from '../components/family-tree/TreeCanvas';
 import { AddMemberModal } from '../components/family-tree/AddMemberModal';
@@ -7,6 +7,7 @@ import { RelationRequestsModal } from '../components/family-tree/RelationRequest
 import { CreateChildModal } from '../components/family-tree/CreateChildModal';
 import { BranchManager } from '../components/family-tree/BranchManager';
 import { RelationFinder } from '../components/family-tree/RelationFinder';
+import { InviteModal } from '../components/family-tree/InviteModal';
 import { api } from '../lib/api';
 import { filterSubtree } from '../lib/familyLayout';
 import { useSocket } from '../contexts/SocketContext';
@@ -23,6 +24,7 @@ export function FamilyTree() {
   const [showCreateChild, setShowCreateChild] = useState(false);
   const [showBranchManager, setShowBranchManager] = useState(false);
   const [showRelationFinder, setShowRelationFinder] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const { socket } = useSocket();
   const loadingRef = useRef(false);
@@ -33,7 +35,7 @@ export function FamilyTree() {
     try {
       const { nodes: ns, edges: es } = await api.get<{ nodes: FamilyNode[]; edges: Relationship[] }>('/family/tree');
       setNodes(ns); setEdges(es);
-    } catch {}
+    } catch { /* ignore network errors */ }
     loadingRef.current = false;
     setLoading(false);
   }, []);
@@ -42,10 +44,11 @@ export function FamilyTree() {
     try {
       const { received } = await api.get<{ received: unknown[] }>('/family/requests');
       setPendingCount(received.length);
-    } catch {}
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTree();
     loadPendingCount();
     api.get<Branch[]>('/branches').then(setBranches).catch(() => {});
@@ -101,6 +104,13 @@ export function FamilyTree() {
             <span className="hidden md:inline text-xs text-gray-400 dark:text-gray-500">
               Kéo node để nối • Cuộn để zoom
             </span>
+
+            <button onClick={() => setShowInvite(true)}
+              title="Mời thành viên"
+              className={`${btnClass} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}>
+              <UserPlus size={16} />
+              <span className="hidden sm:inline">Mời</span>
+            </button>
 
             <button onClick={() => setShowRelationFinder(true)}
               title="Tìm mối quan hệ"
@@ -186,6 +196,7 @@ export function FamilyTree() {
         </div>
       </div>
 
+      <InviteModal open={showInvite} onClose={() => setShowInvite(false)} />
       <AddMemberModal open={showAddModal} onClose={() => setShowAddModal(false)} onAdded={loadTree} existingNodes={nodes} />
       <RelationRequestsModal open={showRequests} onClose={() => setShowRequests(false)} onAccepted={() => { loadTree(); loadPendingCount(); }} />
       <CreateChildModal open={showCreateChild} onClose={() => setShowCreateChild(false)} onCreated={loadTree} />
