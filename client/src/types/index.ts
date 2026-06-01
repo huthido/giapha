@@ -26,6 +26,7 @@ export interface FamilyNode {
   avatar: string | null;
   bio: string | null;
   date_of_birth: string | null;
+  managed_by: string | null;
 }
 
 export interface Relationship {
@@ -121,6 +122,21 @@ export interface Notification {
   body: string;
   data: string;
   read: number;
+  created_at: string;
+}
+
+export interface FamilyEvent {
+  id: string;
+  title: string;
+  date: string;
+  end_date: string | null;
+  description: string | null;
+  type: 'family' | 'personal';
+  user_id: string | null;
+  user_name: string | null;
+  user_avatar: string | null;
+  creator_name: string;
+  created_by: string;
   created_at: string;
 }
 

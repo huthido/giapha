@@ -11,6 +11,7 @@ import { FamilyTree } from './pages/FamilyTree';
 import { Chat } from './pages/Chat';
 import { Profile } from './pages/Profile';
 import { Albums } from './pages/Albums';
+import { Events } from './pages/Events';
 import { Admin } from './pages/Admin';
 import { AuthCallback } from './pages/AuthCallback';
 
@@ -52,6 +53,7 @@ function AppRoutes() {
       <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
       <Route path="/profile/:userId" element={<PrivateRoute><Profile /></PrivateRoute>} />
       <Route path="/albums" element={<PrivateRoute><Albums /></PrivateRoute>} />
+      <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
       <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="*" element={<Navigate to="/" replace />} />

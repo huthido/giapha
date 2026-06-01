@@ -47,7 +47,7 @@ function canEditNode(nodeId: string, userId: string | undefined): boolean {
 
 router.get('/tree', verifyJWT, (_req: AuthRequest, res: Response): void => {
   const nodes = db.prepare(
-    `SELECT fn.*, u.name, u.avatar, u.bio, u.date_of_birth
+    `SELECT fn.*, u.name, u.avatar, u.bio, u.date_of_birth, u.managed_by
      FROM family_nodes fn
      JOIN users u ON fn.user_id = u.id
      ORDER BY fn.generation, fn.pos_x`

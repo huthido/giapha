@@ -30,7 +30,8 @@ export function NodePopup({
   const { user } = useAuth();
   const isMe = node.user_id === user?.id;
   const isAdmin = user?.role === 'admin';
-  const canEditDob = isMe || isAdmin;
+  const isManagedByMe = !!node.managed_by && node.managed_by === user?.id;
+  const canEditDob = isMe || isAdmin || isManagedByMe;
   const [infer, setInfer] = useState<InferResult | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [editingDob, setEditingDob] = useState(false);

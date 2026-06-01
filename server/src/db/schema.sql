@@ -142,6 +142,20 @@ CREATE TABLE IF NOT EXISTS calls (
   FOREIGN KEY (caller_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  date TEXT NOT NULL,        -- YYYY-MM-DD
+  end_date TEXT,             -- tuỳ chọn (cho sự kiện kéo dài nhiều ngày)
+  description TEXT,
+  type TEXT NOT NULL DEFAULT 'family', -- 'family' | 'personal'
+  user_id TEXT,              -- nếu type='personal', gắn với người này
+  created_by TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id)    REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Indexes for the hot lookup paths (foreign-key joins + ordered feeds).
 CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);

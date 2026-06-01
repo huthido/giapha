@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, GitBranch, MessageCircle, Image, LogOut, Shield } from 'lucide-react';
+import { Home, GitBranch, MessageCircle, Image, CalendarDays, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Avatar } from '../ui/Avatar';
 import { ThemeToggle } from '../ui/ThemeToggle';
@@ -8,6 +8,7 @@ import { useSocket } from '../../contexts/SocketContext';
 const navItems = [
   { to: '/', icon: Home, label: 'Trang chủ' },
   { to: '/tree', icon: GitBranch, label: 'Gia phả' },
+  { to: '/events', icon: CalendarDays, label: 'Sự kiện' },
   { to: '/chat', icon: MessageCircle, label: 'Nhắn tin' },
   { to: '/albums', icon: Image, label: 'Ảnh' },
 ];

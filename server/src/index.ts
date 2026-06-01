@@ -18,6 +18,7 @@ import conversationRoutes from './routes/conversations';
 import albumRoutes from './routes/albums';
 import notificationRoutes from './routes/notifications';
 import uploadRoutes from './routes/upload';
+import eventRoutes from './routes/events';
 
 import { registerChatHandlers } from './socket/chatHandler';
 import { registerCallHandlers } from './socket/callHandler';
@@ -72,6 +73,7 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/albums', albumRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/events', eventRoutes);
 
 // Centralized error handler — turns multer / thrown route errors into clean JSON
 // instead of the default HTML 500 (which the JSON-only client can't parse).
