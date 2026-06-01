@@ -39,6 +39,50 @@ router.get('/infer/:targetUserId', verifyJWT, (req: AuthRequest, res: Response):
   res.json({ term, description, path: namedPath });
 });
 
+// GET /family/infer-between?from=userId&to=userId — giữa bất kỳ hai người
+router.get('/infer-between', verifyJWT, (req: AuthRequest, res: Response): void => {
+  const from = String(req.query.from ?? '');
+  const to   = String(req.query.to   ?? '');
+  if (!from || !to) { res.status(400).json({ error: 'Cần from và to' }); return; }
+  if (from === to)  { res.json({ term: '(cùng một người)', description: '', path: [], fromName: '', toName: '' }); return; }
+
+  const rels = db.prepare(
+    'SELECT user_id, related_user_id, relation_type FROM relationships'
+  ).all() as { user_id: string; related_user_id: string; relation_type: string }[];
+
+  const graph = buildGraph(rels);
+  const path  = findPath(from, to, graph);
+
+  // Lấy tên tất cả người trong đường đi + điểm đầu/cuối
+  const allIds = [from, to, ...(path ?? []).map(s => s.userId)];
+  const users = (db.prepare(
+    `SELECT id, name, avatar FROM users WHERE id IN (${allIds.map(() => '?').join(',')})`
+  ).all(...allIds)) as { id: string; name: string; avatar: string | null }[];
+  const infoOf = new Map(users.map(u => [u.id, u]));
+
+  if (!path) {
+    res.json({ term: null, description: 'Không tìm thấy đường quan hệ', path: [],
+      fromName: infoOf.get(from)?.name ?? from, fromAvatar: infoOf.get(from)?.avatar ?? null,
+      toName: infoOf.get(to)?.name ?? to,     toAvatar: infoOf.get(to)?.avatar ?? null,
+    });
+    return;
+  }
+
+  const { term, description } = composePath(path);
+  // namedPath: mỗi bước gồm tên người TẠI điểm đó và nhãn quan hệ đến bước tiếp
+  const namedPath = path.map(s => ({
+    name:   infoOf.get(s.userId)?.name   ?? s.userId,
+    avatar: infoOf.get(s.userId)?.avatar ?? null,
+    via:    s.via,
+  }));
+
+  res.json({
+    term, description, path: namedPath,
+    fromName: infoOf.get(from)?.name ?? from, fromAvatar: infoOf.get(from)?.avatar ?? null,
+    toName:   infoOf.get(to)?.name   ?? to,   toAvatar:   infoOf.get(to)?.avatar   ?? null,
+  });
+});
+
 function canEditNode(nodeId: string, userId: string | undefined): boolean {
   if (isAdmin(userId)) return true;
   const node = db.prepare('SELECT user_id FROM family_nodes WHERE id = ?').get(nodeId) as { user_id?: string } | undefined;
