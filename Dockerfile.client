@@ -18,7 +18,7 @@ COPY client/ ./client/
 ARG VITE_SERVER_URL=""
 ENV VITE_SERVER_URL=${VITE_SERVER_URL}
 
-RUN pnpm --filter giapha-client build
+RUN pnpm --filter client build
 
 # ─── Stage 2: Nginx serving static files ─────────────────────────────────────
 FROM nginx:1.27-alpine
