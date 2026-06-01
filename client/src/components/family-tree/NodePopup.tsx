@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { X, MessageCircle, Phone, Video, GitBranch } from 'lucide-react';
+import { X, MessageCircle, Phone, Video, GitBranch, Pencil, Check } from 'lucide-react';
 import type { FamilyNode } from '../../types';
 import { Avatar } from '../ui/Avatar';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
+import { formatDate } from '../../lib/utils';
 import { EditRelationModal } from './EditRelationModal';
 
 interface InferResult { term: string | null; description: string; }
@@ -28,8 +29,13 @@ export function NodePopup({
   const { onlineUsers } = useSocket();
   const { user } = useAuth();
   const isMe = node.user_id === user?.id;
+  const isAdmin = user?.role === 'admin';
+  const canEditDob = isMe || isAdmin;
   const [infer, setInfer] = useState<InferResult | null>(null);
   const [showEdit, setShowEdit] = useState(false);
+  const [editingDob, setEditingDob] = useState(false);
+  const [dob, setDob] = useState(node.date_of_birth ?? '');
+  const [savingDob, setSavingDob] = useState(false);
 
   useEffect(() => {
     if (isMe) return;
@@ -61,10 +67,45 @@ export function NodePopup({
           />
           <div>
             <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">{node.name}</p>
-            {node.date_of_birth && (
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                {new Date(node.date_of_birth).getFullYear()}
-              </p>
+            {editingDob ? (
+              <div className="flex items-center gap-1 mt-1">
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={e => setDob(e.target.value)}
+                  className="text-xs border border-amber-300 dark:border-amber-600 rounded-lg px-1.5 py-0.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                />
+                <button
+                  disabled={savingDob}
+                  onClick={async () => {
+                    setSavingDob(true);
+                    try {
+                      await api.put(`/users/${node.user_id}`, { date_of_birth: dob || null });
+                      setEditingDob(false);
+                      onRelationChanged?.();
+                    } finally { setSavingDob(false); }
+                  }}
+                  className="p-1 text-amber-500 hover:text-amber-600 disabled:opacity-50"
+                >
+                  <Check size={13} />
+                </button>
+                <button onClick={() => { setEditingDob(false); setDob(node.date_of_birth ?? ''); }}
+                  className="p-1 text-gray-400 hover:text-gray-600">
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {node.date_of_birth ? formatDate(node.date_of_birth) : (canEditDob ? 'Chưa có ngày sinh' : '')}
+                </p>
+                {canEditDob && (
+                  <button onClick={() => setEditingDob(true)}
+                    className="text-gray-300 dark:text-gray-600 hover:text-amber-500 dark:hover:text-amber-400 transition-colors">
+                    <Pencil size={10} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
