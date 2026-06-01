@@ -22,6 +22,7 @@ import uploadRoutes from './routes/upload';
 import { registerChatHandlers } from './socket/chatHandler';
 import { registerCallHandlers } from './socket/callHandler';
 import { onlineUsers } from './socket/presence';
+import { runStartupChecks } from './lib/startup';
 
 const app = express();
 const server = http.createServer(app);
@@ -126,5 +127,6 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`🌳 GiaPha server running on http://localhost:${PORT}`);
+  console.log(`\n🌳 GiaPha server  http://localhost:${PORT}`);
+  runStartupChecks();
 });
