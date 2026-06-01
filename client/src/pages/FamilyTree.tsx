@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Users, Bell, Baby, GitFork, SearchCode, UserPlus, Share2 } from 'lucide-react';
+import { Plus, Users, Bell, Baby, GitFork, SearchCode, UserPlus, Share2, Search, X } from 'lucide-react';
 import { AppLayout } from '../components/layout/AppLayout';
 import { TreeCanvas } from '../components/family-tree/TreeCanvas';
 import { AddMemberModal } from '../components/family-tree/AddMemberModal';
@@ -28,6 +28,10 @@ export function FamilyTree() {
   const [showInvite, setShowInvite] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [highlightUserId, setHighlightUserId] = useState<string | undefined>();
+  const searchRef = useRef<HTMLDivElement>(null);
   const { socket } = useSocket();
   const loadingRef = useRef(false);
 
@@ -66,6 +70,21 @@ export function FamilyTree() {
     };
   }, [socket, loadTree]);
 
+  // Đóng search popover khi click ngoài
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const searchResults = searchQuery.trim()
+    ? nodes.filter(n => n.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 8)
+    : [];
+
   // Tính toán nodes/edges hiển thị theo nhánh đang chọn
   const activeBranch = branches.find(b => b.id === activeBranchId);
   const { nodes: visibleNodes, edges: visibleEdges } = activeBranch
@@ -103,6 +122,62 @@ export function FamilyTree() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            {/* Search popover */}
+            <div className="relative" ref={searchRef}>
+              <button onClick={() => { setSearchOpen(o => !o); setSearchQuery(''); setHighlightUserId(undefined); }}
+                title="Tìm thành viên trong cây"
+                className={`${btnClass} ${searchOpen ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                <Search size={16} />
+                <span className="hidden sm:inline">Tìm</span>
+              </button>
+
+              {searchOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 z-30 overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 dark:border-gray-800">
+                    <Search size={14} className="text-gray-400 shrink-0" />
+                    <input
+                      autoFocus
+                      value={searchQuery}
+                      onChange={e => { setSearchQuery(e.target.value); setHighlightUserId(undefined); }}
+                      placeholder="Nhập tên thành viên..."
+                      className="flex-1 text-sm bg-transparent text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none"
+                    />
+                    {(searchQuery || highlightUserId) && (
+                      <button onClick={() => { setSearchQuery(''); setHighlightUserId(undefined); }}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  {searchResults.length > 0 && (
+                    <div className="max-h-56 overflow-y-auto">
+                      {searchResults.map(n => (
+                        <div key={n.id} onClick={() => { setHighlightUserId(n.user_id); setSearchQuery(n.name); }}
+                          className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${
+                            highlightUserId === n.user_id ? 'bg-amber-50 dark:bg-amber-950/40' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                          }`}>
+                          <div className="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0 text-xs font-bold text-amber-600 dark:text-amber-400">
+                            {n.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-800 dark:text-gray-100 truncate">{n.name}</p>
+                            {n.date_of_birth && <p className="text-xs text-gray-400">{new Date(n.date_of_birth).getFullYear()}</p>}
+                          </div>
+                          {highlightUserId === n.user_id && <span className="text-amber-500 text-xs">✓</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {searchQuery && searchResults.length === 0 && (
+                    <p className="text-center py-4 text-sm text-gray-400 dark:text-gray-500">Không tìm thấy</p>
+                  )}
+                  {!searchQuery && (
+                    <p className="text-center py-4 text-xs text-gray-400 dark:text-gray-500">Nhập tên để tìm kiếm</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button onClick={() => setShowShare(true)}
               title="Chia sẻ cây gia phả"
               className={`${btnClass} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}>
@@ -197,7 +272,7 @@ export function FamilyTree() {
             </div>
           ) : (
             <div className="relative h-full">
-              <TreeCanvas nodes={visibleNodes} edges={visibleEdges} onRelationChanged={loadTree} />
+              <TreeCanvas nodes={visibleNodes} edges={visibleEdges} onRelationChanged={loadTree} highlightUserId={highlightUserId} />
               <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 dark:text-gray-600 pointer-events-none select-none whitespace-nowrap">
                 Kéo node để nối · Cuộn để zoom
               </p>

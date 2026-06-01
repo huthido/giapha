@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { Notification } from '../../types';
 import { useSocket } from '../../contexts/SocketContext';
 import { formatTime } from '../../lib/utils';
 import { MemberSearch } from '../search/MemberSearch';
 
-export function TopBar({ title }: { title?: string }) {
+export function TopBar({ title, onToggleSidebar, sidebarCollapsed }: {
+  title?: string;
+  onToggleSidebar?: () => void;
+  sidebarCollapsed?: boolean;
+}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -50,6 +54,14 @@ export function TopBar({ title }: { title?: string }) {
   return (
     <>
     <header className="min-h-14 pt-[env(safe-area-inset-top)] bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center px-4 sm:px-6 gap-2 sm:gap-4 sticky top-0 z-10">
+      {/* Desktop sidebar toggle */}
+      {onToggleSidebar && (
+        <button onClick={onToggleSidebar}
+          title={sidebarCollapsed ? 'Hiện sidebar' : 'Ẩn sidebar'}
+          className="hidden md:flex p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 items-center justify-center">
+          {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+      )}
       {title && <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">{title}</h2>}
       <div className="flex-1" />
 

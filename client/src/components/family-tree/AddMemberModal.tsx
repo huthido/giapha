@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, Plus } from 'lucide-react';
+import { Send, Plus, Search } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Avatar } from '../ui/Avatar';
 import { api } from '../../lib/api';
@@ -15,10 +15,75 @@ interface AddMemberModalProps {
   existingNodes: FamilyNode[];
 }
 
+interface PersonOption {
+  id: string;
+  name: string;
+  avatar: string | null;
+  sub?: string;
+}
+
+function PersonPickerField({
+  label, value, onChange, options, placeholder = 'Tìm theo tên...',
+}: {
+  label: string;
+  value: string;
+  onChange: (id: string) => void;
+  options: PersonOption[];
+  placeholder?: string;
+}) {
+  const [search, setSearch] = useState('');
+  const filtered = options.filter(
+    o => !search || o.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const selected = options.find(o => o.id === value);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{label}</label>
+      {selected && (
+        <div className="flex items-center gap-2 px-3 py-2 mb-1.5 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800">
+          <Avatar src={selected.avatar} name={selected.name} size="xs" />
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-300 flex-1 truncate">{selected.name}</span>
+          <button onClick={() => onChange('')} className="text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 text-xs px-1">✕</button>
+        </div>
+      )}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+          <Search size={13} className="text-gray-400 shrink-0" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 text-sm bg-transparent text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none"
+          />
+        </div>
+        <div className="max-h-36 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/60">
+          {filtered.map(o => (
+            <div key={o.id} onClick={() => { onChange(o.id); setSearch(''); }}
+              className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors min-h-[44px] ${
+                value === o.id
+                  ? 'bg-amber-50 dark:bg-amber-950/40'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}>
+              <Avatar src={o.avatar} name={o.name} size="xs" />
+              <span className="text-sm text-gray-700 dark:text-gray-200 flex-1 truncate">{o.name}</span>
+              {o.sub && <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{o.sub}</span>}
+              {value === o.id && <span className="text-amber-500 text-xs font-bold shrink-0">✓</span>}
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-center py-4 text-sm text-gray-400 dark:text-gray-500">Không tìm thấy</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AddMemberModal({ open, onClose, onAdded, existingNodes }: AddMemberModalProps) {
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<string>('');
-  const [relatedNode, setRelatedNode] = useState<string>('');
+  const [selectedUser, setSelectedUser] = useState('');
+  const [relatedNode, setRelatedNode] = useState('');
   const [relationType, setRelationType] = useState('con trai');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,29 +93,37 @@ export function AddMemberModal({ open, onClose, onAdded, existingNodes }: AddMem
 
   useEffect(() => {
     if (open) {
-      setSelectedUser('');
-      setRelatedNode('');
-      setRelationType('con trai');
-      setMessage('');
-      api.get<User[]>('/users').then(setUsers);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedUser(''); setRelatedNode(''); setRelationType('con trai'); setMessage('');
+      api.get<User[]>('/users').then(setUsers).catch(() => {});
     }
   }, [open]);
 
-  const relatedNodeData = existingNodes.find(n => n.id === relatedNode);
-  const selectedTarget = relatedNodeData?.user_id;
+  const userOptions: PersonOption[] = users.map(u => ({
+    id: u.id,
+    name: u.name,
+    avatar: u.avatar,
+    sub: u.id === me?.id ? '(bạn)' : undefined,
+  }));
 
-  // Non-admin gửi REQUEST thay vì tạo trực tiếp (trừ khi selectedUser là chính họ)
+  const nodeOptions: PersonOption[] = existingNodes.map(n => ({
+    id: n.id,
+    name: n.name,
+    avatar: n.avatar,
+    sub: n.date_of_birth ? String(new Date(n.date_of_birth).getFullYear()) : undefined,
+  }));
+
+  const relatedNodeData = existingNodes.find(n => n.id === relatedNode);
   const willRequest = !isAdmin && selectedUser !== me?.id;
 
   const handleSubmit = async () => {
     if (!selectedUser || !relatedNode) { showToast('Chọn đủ thông tin', 'error'); return; }
-    if (selectedUser === selectedTarget) { showToast('Không thể tạo quan hệ với chính mình', 'error'); return; }
+    if (selectedUser === relatedNodeData?.user_id) { showToast('Không thể tạo quan hệ với chính mình', 'error'); return; }
     setLoading(true);
     try {
       if (willRequest) {
-        // Gửi yêu cầu đến người được chọn
         await api.post('/family/requests', {
-          to_user_id: selectedTarget,
+          to_user_id: relatedNodeData?.user_id,
           relation_type: relationType,
           message: message.trim() || undefined,
         });
@@ -58,14 +131,14 @@ export function AddMemberModal({ open, onClose, onAdded, existingNodes }: AddMem
       } else {
         await api.post('/family/relationships', {
           user_id: selectedUser,
-          related_user_id: selectedTarget,
+          related_user_id: relatedNodeData?.user_id,
           relation_type: relationType,
         });
         showToast('Đã thêm quan hệ thành công', 'success');
         onAdded();
       }
       onClose();
-    } catch (err: any) { showToast(err.message, 'error'); }
+    } catch (err: unknown) { showToast(err instanceof Error ? err.message : 'Lỗi', 'error'); }
     setLoading(false);
   };
 
@@ -74,38 +147,25 @@ export function AddMemberModal({ open, onClose, onAdded, existingNodes }: AddMem
   return (
     <Modal open={open} onClose={onClose} title="Thêm quan hệ gia đình">
       <div className="space-y-4">
+        <PersonPickerField
+          label="Thành viên"
+          value={selectedUser}
+          onChange={setSelectedUser}
+          options={userOptions}
+          placeholder="Tìm thành viên..."
+        />
 
-        {/* Chọn thành viên A */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Thành viên</label>
-          <div className="max-h-52 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-800">
-            {users.map(u => (
-              <div key={u.id} onClick={() => setSelectedUser(u.id)}
-                className={`flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-50 dark:active:bg-gray-800 transition-colors min-h-[52px] touch-manipulation ${selectedUser === u.id ? 'bg-amber-50 dark:bg-amber-950/40' : ''}`}>
-                <Avatar src={u.avatar} name={u.name} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-gray-700 dark:text-gray-200">{u.name}</span>
-                  {u.id === me?.id && <span className="ml-2 text-xs text-amber-500">(bạn)</span>}
-                </div>
-                {selectedUser === u.id && <span className="text-amber-500 text-xs font-bold">✓</span>}
-              </div>
-            ))}
-          </div>
-        </div>
+        <PersonPickerField
+          label="Có quan hệ với ai?"
+          value={relatedNode}
+          onChange={setRelatedNode}
+          options={nodeOptions}
+          placeholder="Tìm người trong cây..."
+        />
 
-        {/* Có quan hệ với ai */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Có quan hệ với ai?</label>
-          <select value={relatedNode} onChange={e => setRelatedNode(e.target.value)} className={selectClass}>
-            <option value="">-- Chọn người --</option>
-            {existingNodes.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
-          </select>
-        </div>
-
-        {/* Vai trò */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {relatedNodeData ? `${relatedNodeData.name} là` : 'Vai trò'} ...
+            {relatedNodeData ? `${relatedNodeData.name} là ...` : 'Vai trò'}
           </label>
           <select value={relationType} onChange={e => setRelationType(e.target.value)} className={selectClass}>
             {RELATION_GROUPS.map(g => (
@@ -116,38 +176,31 @@ export function AddMemberModal({ open, onClose, onAdded, existingNodes }: AddMem
           </select>
         </div>
 
-        {/* Nếu là request → thêm tin nhắn tùy chọn */}
         {willRequest && selectedUser && relatedNode && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Tin nhắn kèm theo <span className="text-gray-400 font-normal">(tùy chọn)</span>
-            </label>
-            <input
-              value={message} onChange={e => setMessage(e.target.value)}
-              placeholder="Ví dụ: Chào, tôi là con trai của bạn..."
-              className={selectClass}
-            />
-          </div>
-        )}
-
-        {/* Mô tả hành động */}
-        {willRequest && selectedUser && relatedNode && (
-          <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl text-xs text-blue-700 dark:text-blue-300">
-            <Send size={14} className="mt-0.5 flex-shrink-0" />
-            <span>
-              Sẽ gửi yêu cầu đến <strong>{relatedNodeData?.name}</strong> để xác nhận quan hệ.
-              Họ cần chấp nhận trước khi quan hệ được thêm vào cây.
-            </span>
-          </div>
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Tin nhắn kèm theo <span className="text-gray-400 font-normal">(tùy chọn)</span>
+              </label>
+              <input value={message} onChange={e => setMessage(e.target.value)}
+                placeholder="Ví dụ: Chào, tôi là con trai của bạn..."
+                className={selectClass} />
+            </div>
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl text-xs text-blue-700 dark:text-blue-300">
+              <Send size={14} className="mt-0.5 shrink-0" />
+              <span>
+                Sẽ gửi yêu cầu đến <strong>{relatedNodeData?.name}</strong> để xác nhận quan hệ.
+              </span>
+            </div>
+          </>
         )}
 
         <button onClick={handleSubmit} disabled={loading || !selectedUser || !relatedNode}
           className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-colors min-h-[52px] touch-manipulation flex items-center justify-center gap-2">
-          {loading ? 'Đang xử lý...' : willRequest ? (
-            <><Send size={16} /> Gửi yêu cầu</>
-          ) : (
-            <><Plus size={16} /> Thêm quan hệ</>
-          )}
+          {loading ? 'Đang xử lý...' : willRequest
+            ? <><Send size={16} /> Gửi yêu cầu</>
+            : <><Plus size={16} /> Thêm quan hệ</>
+          }
         </button>
       </div>
     </Modal>

@@ -15,15 +15,16 @@ const GEN_COLORS = ['#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4
 
 interface Transform { x: number; y: number; scale: number; }
 interface Popup { node: LaidOutNode; screenX: number; screenY: number; }
-interface DragLink { fromNode: LaidOutNode; curX: number; curY: number; }
+interface DragLink { fromNode: LaidOutNode; svgX: number; svgY: number; }
 
 interface TreeCanvasProps {
   nodes: FamilyNode[];
   edges: Relationship[];
   onRelationChanged?: () => void;
+  highlightUserId?: string;
 }
 
-export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps) {
+export function TreeCanvas({ nodes, edges, onRelationChanged, highlightUserId }: TreeCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
   const [draggingCanvas, setDraggingCanvas] = useState(false);
@@ -50,6 +51,22 @@ export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps)
   }, [layout.width, layout.height]);
 
   useEffect(() => { fitView(); }, [fitView]);
+
+  // Khi highlightUserId thay đổi, căn giữa canvas vào node được highlight
+  useEffect(() => {
+    if (!highlightUserId) return;
+    const node = layout.nodes.find(n => n.user_id === highlightUserId);
+    if (!node) return;
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const scale = Math.min(Math.max(transform.scale, 0.8), 1.2);
+    setTransform({
+      x: rect.width  / 2 - node.x * scale,
+      y: rect.height / 2 - node.y * scale,
+      scale,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightUserId]);
 
   useEffect(() => {
     const el = svgRef.current;
@@ -131,23 +148,18 @@ export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps)
       if (moved < dragThreshold) return;
 
       setDraggingCanvas(false);
-      const dl = { fromNode: node, curX: cx, curY: cy };
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const svgX = (cx - rect.left - transform.x) / transform.scale;
+      const svgY = (cy - rect.top  - transform.y) / transform.scale;
+      const dl = { fromNode: node, svgX, svgY };
       setDragLink(dl);
       dragLinkRef.current = dl;
-
-      // highlight target node under cursor
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (rect) {
-        const svgX = (cx - rect.left - transform.x) / transform.scale;
-        const svgY = (cy - rect.top  - transform.y) / transform.scale;
-        const hit = layout.nodes.find(n =>
-          n.id !== node.id &&
-          Math.hypot(n.x - svgX, n.y - svgY) <= NODE_R + 8
-        ) ?? null;
-        setLinkTarget(hit);
-        setDragLink({ fromNode: node, curX: cx, curY: cy });
-        dragLinkRef.current = { fromNode: node, curX: cx, curY: cy };
-      }
+      const hit = layout.nodes.find(n =>
+        n.id !== node.id &&
+        Math.hypot(n.x - svgX, n.y - svgY) <= NODE_R + 8
+      ) ?? null;
+      setLinkTarget(hit);
     };
 
     const onUp = (ev: MouseEvent | TouchEvent) => {
@@ -207,7 +219,7 @@ export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps)
     try {
       const conv = await api.post<{ id: string }>('/conversations', { type: 'direct', memberIds: [node.user_id] });
       navigate(`/chat?conv=${conv.id}`);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const handleCall = async (userId: string, type: 'audio' | 'video') => {
@@ -215,7 +227,7 @@ export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps)
     try {
       const conv = await api.post<{ id: string }>('/conversations', { type: 'direct', memberIds: [userId] });
       callUser(userId, conv.id, type);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const linkPath = (l: typeof layout.links[number]) => {
@@ -252,20 +264,14 @@ export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps)
           ))}
 
           {/* Drag-to-connect preview line */}
-          {dragLink && (() => {
-            const rect = svgRef.current?.getBoundingClientRect();
-            if (!rect) return null;
-            const tx = (dragLink.curX - rect.left - transform.x) / transform.scale;
-            const ty = (dragLink.curY - rect.top  - transform.y) / transform.scale;
-            return (
-              <line
-                x1={dragLink.fromNode.x} y1={dragLink.fromNode.y}
-                x2={tx} y2={ty}
-                stroke="#f97316" strokeWidth={2} strokeDasharray="6 4"
-                opacity={0.8} strokeLinecap="round" pointerEvents="none"
-              />
-            );
-          })()}
+          {dragLink && (
+            <line
+              x1={dragLink.fromNode.x} y1={dragLink.fromNode.y}
+              x2={dragLink.svgX} y2={dragLink.svgY}
+              stroke="#f97316" strokeWidth={2} strokeDasharray="6 4"
+              opacity={0.8} strokeLinecap="round" pointerEvents="none"
+            />
+          )}
 
           {/* Nodes */}
           {layout.nodes.map(node => {
@@ -274,6 +280,7 @@ export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps)
             const isMe = node.user_id === user?.id;
             const isDragTarget = linkTarget?.id === node.id;
             const isDragSource = dragLink?.fromNode.id === node.id;
+            const isHighlighted = node.user_id === highlightUserId;
             return (
               <g key={node.id}
                 transform={`translate(${node.x} ${node.y})`}
@@ -282,9 +289,16 @@ export function TreeCanvas({ nodes, edges, onRelationChanged }: TreeCanvasProps)
                 onTouchStart={e => { e.stopPropagation(); startNodeDrag(e, node); }}
                 style={{ cursor: 'pointer' }}
               >
+                {isHighlighted && (
+                  <circle r={NODE_R + 14} fill="none" stroke="#22c55e" strokeWidth={2.5}
+                    strokeDasharray="6 3" opacity={0.7}>
+                    <animateTransform attributeName="transform" type="rotate"
+                      from="0" to="360" dur="4s" repeatCount="indefinite" />
+                  </circle>
+                )}
                 <circle r={NODE_R + 4} fill="white"
-                  stroke={isDragTarget ? '#22c55e' : isDragSource ? '#f97316' : isMe ? '#f97316' : color}
-                  strokeWidth={isDragTarget ? 3.5 : isMe ? 3 : 2} opacity={0.97}
+                  stroke={isHighlighted ? '#22c55e' : isDragTarget ? '#22c55e' : isDragSource ? '#f97316' : isMe ? '#f97316' : color}
+                  strokeWidth={isHighlighted ? 3.5 : isDragTarget ? 3.5 : isMe ? 3 : 2} opacity={0.97}
                   filter="drop-shadow(0 2px 8px rgba(0,0,0,0.12))" />
                 {node.avatar ? (
                   <image href={mediaUrl(node.avatar)} x={-NODE_R} y={-NODE_R}

@@ -15,14 +15,15 @@ interface AppLayoutProps {
 export function AppLayout({ children, title }: AppLayoutProps) {
   const { incomingCall, activeCall } = useCall();
   const [navOpen, setNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="flex h-[100dvh] bg-gray-50 dark:bg-gray-950">
-      {/* Desktop spacer — giữ đúng 256px chỗ cho sidebar fixed */}
-      <div className="hidden md:block w-64 flex-shrink-0" aria-hidden="true" />
-      <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
+      {/* Desktop spacer — matches sidebar width, collapses when sidebar is hidden */}
+      <div className={`hidden md:block flex-shrink-0 transition-all duration-200 ${sidebarCollapsed ? 'w-0' : 'w-64'}`} aria-hidden="true" />
+      <Sidebar open={navOpen} onClose={() => setNavOpen(false)} collapsed={sidebarCollapsed} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopBar title={title} />
+        <TopBar title={title} onToggleSidebar={() => setSidebarCollapsed(c => !c)} sidebarCollapsed={sidebarCollapsed} />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>

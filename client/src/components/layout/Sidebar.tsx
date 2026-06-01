@@ -16,9 +16,10 @@ const navItems = [
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  collapsed?: boolean;
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
   const { user, logout } = useAuth();
   const { onlineUsers } = useSocket();
   const items = user?.role === 'admin'
@@ -36,9 +37,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       />
 
       <aside
-        className={`fixed left-0 top-0 h-[100dvh] w-64 pt-[env(safe-area-inset-top)] bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col z-30 shadow-sm transition-transform duration-200 md:translate-x-0 ${
-          open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed left-0 top-0 h-[100dvh] w-64 pt-[env(safe-area-inset-top)] bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col z-30 shadow-sm transition-transform duration-200 ${
+          collapsed ? 'md:-translate-x-full' : 'md:translate-x-0'
+        } ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="p-5 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
@@ -86,9 +87,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <div className="flex gap-1">
               <ThemeToggle className="flex-1" />
               <button onClick={logout}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm">
-                <LogOut size={16} />
-                Đăng xuất
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm whitespace-nowrap min-w-0">
+                <LogOut size={15} className="shrink-0" />
+                <span>Đăng xuất</span>
               </button>
             </div>
           </div>
