@@ -82,6 +82,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_rel_req_from ON relationship_requests(from_user_id, status);
 `);
 
+// Migration: extended user profile fields
+const existingCols = (db.prepare('PRAGMA table_info(users)').all() as { name: string }[]).map(c => c.name);
+const addIfMissing = (col: string, def: string) => {
+  if (!existingCols.includes(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${def}`);
+};
+addIfMissing('gender',     'TEXT');
+addIfMissing('hometown',   'TEXT');
+addIfMissing('occupation', 'TEXT');
+addIfMissing('death_date', 'TEXT');
+
 // Migration: branches table
 db.exec(`
   CREATE TABLE IF NOT EXISTS branches (

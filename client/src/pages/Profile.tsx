@@ -13,7 +13,8 @@ import { useToast } from '../components/ui/Toast';
 import { parseJSON, isVideoUrl, mediaUrl } from '../lib/utils';
 
 interface FormData {
-  name: string; bio: string; date_of_birth: string; phone: string; address: string;
+  name: string; bio: string; date_of_birth: string; death_date: string;
+  phone: string; address: string; gender: string; hometown: string; occupation: string;
 }
 
 export function Profile() {
@@ -33,7 +34,7 @@ export function Profile() {
   const isEditable = isMe || isManagedByMe;
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<FormData>({ name: '', bio: '', date_of_birth: '', phone: '', address: '' });
+  const [form, setForm] = useState<FormData>({ name: '', bio: '', date_of_birth: '', death_date: '', phone: '', address: '', gender: '', hometown: '', occupation: '' });
   const [activeTab, setActiveTab] = useState<'posts' | 'photos'>('posts');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
@@ -45,7 +46,7 @@ export function Profile() {
         const { posts: ps, ...u } = data;
         setProfile(u);
         setPosts(ps);
-        setForm({ name: u.name, bio: u.bio || '', date_of_birth: u.date_of_birth || '', phone: u.phone || '', address: u.address || '' });
+        setForm({ name: u.name, bio: u.bio || '', date_of_birth: u.date_of_birth || '', death_date: u.death_date || '', phone: u.phone || '', address: u.address || '', gender: u.gender || '', hometown: u.hometown || '', occupation: u.occupation || '' });
       })
       .finally(() => setLoading(false));
   }, [userId]);

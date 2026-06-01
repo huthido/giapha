@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- NOTE: gender, hometown, occupation, death_date thêm qua migration trong database.ts
+
 CREATE TABLE IF NOT EXISTS family_nodes (
   id TEXT PRIMARY KEY,
   user_id TEXT UNIQUE NOT NULL,

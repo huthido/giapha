@@ -22,10 +22,9 @@ function canEditProfile(requesterId: string | undefined, targetId: string): bool
 
 router.get('/:id', verifyJWT, (req: AuthRequest, res: Response): void => {
   const editable = canEditProfile(req.userId, String(req.params.id));
+  const cols = 'id, name, avatar, bio, date_of_birth, phone, address, cover_photo, created_at, managed_by, gender, hometown, occupation, death_date';
   // Email là PII — chỉ chủ sở hữu hoặc admin/người tạo mới thấy
-  const columns = editable
-    ? 'id, name, email, avatar, bio, date_of_birth, phone, address, cover_photo, created_at, managed_by'
-    : 'id, name, avatar, bio, date_of_birth, phone, address, cover_photo, created_at, managed_by';
+  const columns = editable ? `${cols}, email` : cols;
   const user = db.prepare(
     `SELECT ${columns} FROM users WHERE id = ?`
   ).get(req.params.id) as any;
@@ -50,13 +49,27 @@ router.put('/:id', verifyJWT, (req: AuthRequest, res: Response): void => {
   if (!canEditProfile(req.userId, String(req.params.id))) {
     res.status(403).json({ error: 'Không có quyền chỉnh sửa hồ sơ này' }); return;
   }
-  const { name, bio, date_of_birth, phone, address } = req.body;
+  const { name, bio, date_of_birth, phone, address, gender, hometown, occupation, death_date } = req.body;
   const targetId = req.params.id;
-  db.prepare(
-    'UPDATE users SET name = COALESCE(?, name), bio = COALESCE(?, bio), date_of_birth = COALESCE(?, date_of_birth), phone = COALESCE(?, phone), address = COALESCE(?, address) WHERE id = ?'
-  ).run(name || null, bio || null, date_of_birth || null, phone || null, address || null, targetId);
+  db.prepare(`
+    UPDATE users SET
+      name       = COALESCE(?, name),
+      bio        = COALESCE(?, bio),
+      date_of_birth = COALESCE(?, date_of_birth),
+      phone      = COALESCE(?, phone),
+      address    = COALESCE(?, address),
+      gender     = ?,
+      hometown   = ?,
+      occupation = ?,
+      death_date = ?
+    WHERE id = ?
+  `).run(
+    name || null, bio || null, date_of_birth || null, phone || null, address || null,
+    gender || null, hometown || null, occupation || null, death_date || null,
+    targetId
+  );
   const user = db.prepare(
-    'SELECT id, name, email, avatar, bio, date_of_birth, phone, address, cover_photo, managed_by FROM users WHERE id = ?'
+    'SELECT id, name, email, avatar, bio, date_of_birth, phone, address, cover_photo, managed_by, gender, hometown, occupation, death_date FROM users WHERE id = ?'
   ).get(targetId);
   res.json(user);
 });
@@ -83,14 +96,27 @@ router.post('/:id/cover', verifyJWT, upload.single('cover'), async (req: AuthReq
 
 router.get('/', verifyJWT, (req: AuthRequest, res: Response): void => {
   const q = String(req.query.q ?? '').trim();
-  const users = q
-    ? db.prepare(
-        "SELECT id, name, avatar, bio, date_of_birth, role FROM users WHERE name LIKE ? ORDER BY name"
-      ).all(`%${q}%`)
-    : db.prepare(
-        'SELECT id, name, avatar, bio, date_of_birth, role FROM users ORDER BY name'
-      ).all();
+  // Admin thấy thêm email, phone, created_at, managed_by để quản lý
+  const adminCols = isAdmin(req.userId)
+    ? 'id, name, email, avatar, bio, date_of_birth, phone, address, role, created_at, managed_by, gender, hometown, occupation, death_date'
+    : 'id, name, avatar, bio, date_of_birth, role, gender, hometown, occupation, death_date';
+  const sql = `SELECT ${adminCols} FROM users${q ? ' WHERE name LIKE ?' : ''} ORDER BY name`;
+  const users = q ? db.prepare(sql).all(`%${q}%`) : db.prepare(sql).all();
   res.json(users);
+});
+
+router.delete('/:id', verifyJWT, requireAdmin, (req: AuthRequest, res: Response): void => {
+  if (req.params.id === req.userId) {
+    res.status(400).json({ error: 'Không thể xóa tài khoản của chính mình' }); return;
+  }
+  const target = db.prepare('SELECT id, role FROM users WHERE id = ?').get(req.params.id) as { id: string; role: string } | undefined;
+  if (!target) { res.status(404).json({ error: 'Không tìm thấy' }); return; }
+  if (target.role === 'admin') {
+    const adminCount = (db.prepare("SELECT COUNT(*) as n FROM users WHERE role='admin'").get() as { n: number }).n;
+    if (adminCount <= 1) { res.status(400).json({ error: 'Không thể xóa admin cuối cùng' }); return; }
+  }
+  db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
 });
 
 // Change a member's role. Admin-only. Guarded against self-lockout: an admin

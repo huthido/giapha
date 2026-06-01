@@ -1,13 +1,14 @@
 import { useRef } from 'react';
 import type { ChangeEvent } from 'react';
-import { Camera, Edit2, Save, X, MessageCircle, Phone, Video, Baby } from 'lucide-react';
+import { Camera, Edit2, Save, X, MessageCircle, Phone, Video, Baby, MapPin, Briefcase, Heart } from 'lucide-react';
 import type { User } from '../../types';
 import { Avatar } from '../ui/Avatar';
 import { ProfileEditForm } from './ProfileEditForm';
 import { formatDate, mediaUrl } from '../../lib/utils';
 
 interface FormData {
-  name: string; bio: string; date_of_birth: string; phone: string; address: string;
+  name: string; bio: string; date_of_birth: string; death_date: string;
+  phone: string; address: string; gender: string; hometown: string; occupation: string;
 }
 
 interface ProfileHeaderProps {
@@ -137,10 +138,14 @@ export function ProfileHeader({
               )}
             </div>
             {profile.bio && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{profile.bio}</p>}
-            <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400 dark:text-gray-500">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-400 dark:text-gray-500">
+              {profile.gender && <span>{profile.gender === 'nam' ? '♂' : profile.gender === 'nữ' ? '♀' : '⚧'} {profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)}</span>}
               {profile.date_of_birth && <span>🎂 {formatDate(profile.date_of_birth)}</span>}
+              {profile.death_date && <span>🕊️ {formatDate(profile.death_date)}</span>}
+              {profile.occupation && <span className="flex items-center gap-1"><Briefcase size={11} /> {profile.occupation}</span>}
+              {profile.hometown && <span className="flex items-center gap-1"><MapPin size={11} /> {profile.hometown}</span>}
+              {profile.address && <span className="flex items-center gap-1"><Heart size={11} /> {profile.address}</span>}
               {profile.phone && <span>📞 {profile.phone}</span>}
-              {profile.address && <span>📍 {profile.address}</span>}
             </div>
           </div>
         )}

@@ -1,14 +1,18 @@
 export interface User {
   id: string;
   name: string;
-  email?: string; // only present for the logged-in user (own profile)
+  email?: string;
   role?: 'admin' | 'member';
   avatar: string | null;
   cover_photo: string | null;
   bio: string | null;
   date_of_birth: string | null;
+  death_date: string | null;
   phone: string | null;
   address: string | null;
+  gender: string | null;
+  hometown: string | null;
+  occupation: string | null;
   created_at: string;
   relation?: string | null;
   managed_by?: string | null;
