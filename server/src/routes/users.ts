@@ -81,10 +81,15 @@ router.post('/:id/cover', verifyJWT, upload.single('cover'), async (req: AuthReq
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/', verifyJWT, (_req: AuthRequest, res: Response): void => {
-  const users = db.prepare(
-    'SELECT id, name, avatar, bio, date_of_birth, role FROM users ORDER BY name'
-  ).all();
+router.get('/', verifyJWT, (req: AuthRequest, res: Response): void => {
+  const q = String(req.query.q ?? '').trim();
+  const users = q
+    ? db.prepare(
+        "SELECT id, name, avatar, bio, date_of_birth, role FROM users WHERE name LIKE ? ORDER BY name"
+      ).all(`%${q}%`)
+    : db.prepare(
+        'SELECT id, name, avatar, bio, date_of_birth, role FROM users ORDER BY name'
+      ).all();
   res.json(users);
 });
 

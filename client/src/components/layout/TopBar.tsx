@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { Notification } from '../../types';
 import { useSocket } from '../../contexts/SocketContext';
 import { formatTime } from '../../lib/utils';
+import { MemberSearch } from '../search/MemberSearch';
 
 export function TopBar({ title }: { title?: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [showSearch, setShowSearch] = useState(false);
   const { socket } = useSocket();
   const dropRef = useRef<HTMLDivElement>(null);
 
@@ -50,6 +52,12 @@ export function TopBar({ title }: { title?: string }) {
       {title && <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">{title}</h2>}
       <div className="flex-1" />
 
+      <button onClick={() => setShowSearch(true)}
+        className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400 min-w-[44px] min-h-[44px] flex items-center justify-center"
+        title="Tìm thành viên">
+        <Search size={20} />
+      </button>
+
       <div className="relative" ref={dropRef}>
         <button onClick={handleOpen}
           className="relative p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400 min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -84,5 +92,7 @@ export function TopBar({ title }: { title?: string }) {
         )}
       </div>
     </header>
+
+    <MemberSearch open={showSearch} onClose={() => setShowSearch(false)} />
   );
 }
