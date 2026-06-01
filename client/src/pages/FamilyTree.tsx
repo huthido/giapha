@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Users, Bell, Baby, GitFork, SearchCode, UserPlus } from 'lucide-react';
+import { Plus, Users, Bell, Baby, GitFork, SearchCode, UserPlus, Share2 } from 'lucide-react';
 import { AppLayout } from '../components/layout/AppLayout';
 import { TreeCanvas } from '../components/family-tree/TreeCanvas';
 import { AddMemberModal } from '../components/family-tree/AddMemberModal';
@@ -8,6 +8,7 @@ import { CreateChildModal } from '../components/family-tree/CreateChildModal';
 import { BranchManager } from '../components/family-tree/BranchManager';
 import { RelationFinder } from '../components/family-tree/RelationFinder';
 import { InviteModal } from '../components/family-tree/InviteModal';
+import { ShareModal } from '../components/family-tree/ShareModal';
 import { api } from '../lib/api';
 import { filterSubtree } from '../lib/familyLayout';
 import { useSocket } from '../contexts/SocketContext';
@@ -25,6 +26,7 @@ export function FamilyTree() {
   const [showBranchManager, setShowBranchManager] = useState(false);
   const [showRelationFinder, setShowRelationFinder] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const { socket } = useSocket();
   const loadingRef = useRef(false);
@@ -101,6 +103,13 @@ export function FamilyTree() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button onClick={() => setShowShare(true)}
+              title="Chia sẻ cây gia phả"
+              className={`${btnClass} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}>
+              <Share2 size={16} />
+              <span className="hidden sm:inline">Chia sẻ</span>
+            </button>
+
             <button onClick={() => setShowInvite(true)}
               title="Mời thành viên"
               className={`${btnClass} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}>
@@ -197,6 +206,7 @@ export function FamilyTree() {
         </div>
       </div>
 
+      <ShareModal open={showShare} onClose={() => setShowShare(false)} branches={branches} />
       <InviteModal open={showInvite} onClose={() => setShowInvite(false)} />
       <AddMemberModal open={showAddModal} onClose={() => setShowAddModal(false)} onAdded={loadTree} existingNodes={nodes} />
       <RelationRequestsModal open={showRequests} onClose={() => setShowRequests(false)} onAccepted={() => { loadTree(); loadPendingCount(); }} />

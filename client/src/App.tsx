@@ -15,6 +15,7 @@ import { Events } from './pages/Events';
 import { Admin } from './pages/Admin';
 import { AuthCallback } from './pages/AuthCallback';
 import { Join } from './pages/Join';
+import { SharedTree } from './pages/SharedTree';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ function AppRoutes() {
       <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/join" element={<Join />} />
+      <Route path="/share/:token" element={<SharedTree />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

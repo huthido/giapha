@@ -107,6 +107,26 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_branches_root ON branches(root_user_id);
 `);
 
+// Migration: tree_shares table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tree_shares (
+    id TEXT PRIMARY KEY,
+    token TEXT UNIQUE NOT NULL,
+    created_by TEXT NOT NULL,
+    branch_id TEXT,
+    title TEXT,
+    password_hash TEXT,
+    expires_at TEXT,
+    status TEXT DEFAULT 'active',
+    view_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (branch_id)  REFERENCES branches(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_tree_share_token   ON tree_shares(token);
+  CREATE INDEX IF NOT EXISTS idx_tree_share_creator ON tree_shares(created_by);
+`);
+
 // Migration: invite_tokens table
 db.exec(`
   CREATE TABLE IF NOT EXISTS invite_tokens (
