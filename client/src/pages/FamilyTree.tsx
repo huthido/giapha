@@ -101,10 +101,6 @@ export function FamilyTree() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <span className="hidden md:inline text-xs text-gray-400 dark:text-gray-500">
-              Kéo node để nối • Cuộn để zoom
-            </span>
-
             <button onClick={() => setShowInvite(true)}
               title="Mời thành viên"
               className={`${btnClass} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}>
@@ -191,7 +187,12 @@ export function FamilyTree() {
               Không có thành viên nào trong nhánh này
             </div>
           ) : (
-            <TreeCanvas nodes={visibleNodes} edges={visibleEdges} onRelationChanged={loadTree} />
+            <div className="relative h-full">
+              <TreeCanvas nodes={visibleNodes} edges={visibleEdges} onRelationChanged={loadTree} />
+              <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 dark:text-gray-600 pointer-events-none select-none whitespace-nowrap">
+                Kéo node để nối · Cuộn để zoom
+              </p>
+            </div>
           )}
         </div>
       </div>
