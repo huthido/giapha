@@ -89,15 +89,20 @@ function canEditNode(nodeId: string, userId: string | undefined): boolean {
   return !!node && node.user_id === userId;
 }
 
-router.get('/tree', verifyJWT, (_req: AuthRequest, res: Response): void => {
-  const nodes = db.prepare(
+router.get('/tree', verifyJWT, (req: AuthRequest, res: Response): void => {
+  const me = req.userId!;
+
+  // Admin thấy toàn bộ cây
+  const admin = (db.prepare('SELECT role FROM users WHERE id = ?').get(me) as any)?.role === 'admin';
+
+  const allNodes = db.prepare(
     `SELECT fn.*, u.name, u.avatar, u.bio, u.date_of_birth, u.managed_by
      FROM family_nodes fn
      JOIN users u ON fn.user_id = u.id
      ORDER BY fn.generation, fn.pos_x`
-  ).all();
+  ).all() as any[];
 
-  const edges = db.prepare(
+  const allEdges = db.prepare(
     `SELECT r.*,
      u1.name as user_name, u2.name as related_name,
      fn1.id as from_node_id, fn2.id as to_node_id
@@ -106,7 +111,40 @@ router.get('/tree', verifyJWT, (_req: AuthRequest, res: Response): void => {
      JOIN users u2 ON r.related_user_id = u2.id
      JOIN family_nodes fn1 ON fn1.user_id = r.user_id
      JOIN family_nodes fn2 ON fn2.user_id = r.related_user_id`
-  ).all();
+  ).all() as any[];
+
+  if (admin) { res.json({ nodes: allNodes, edges: allEdges }); return; }
+
+  // Lọc: chỉ giữ những node có quan hệ (trực tiếp hoặc gián tiếp) với người dùng hiện tại.
+  // Dùng BFS trên graph quan hệ hai chiều để tìm tập connected với `me`.
+  const adj = new Map<string, Set<string>>();
+  const add = (a: string, b: string) => {
+    if (!adj.has(a)) adj.set(a, new Set());
+    adj.get(a)!.add(b);
+  };
+  for (const e of allEdges) {
+    add(e.user_id, e.related_user_id);
+    add(e.related_user_id, e.user_id);
+  }
+
+  const visible = new Set<string>([me]);
+  const queue = [me];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const nbr of adj.get(cur) ?? []) {
+      if (!visible.has(nbr)) { visible.add(nbr); queue.push(nbr); }
+    }
+  }
+
+  // Nếu người dùng cũng là người tạo tài khoản con (managed_by), thêm các con vào
+  for (const n of allNodes) {
+    if (n.managed_by === me && !visible.has(n.user_id)) {
+      visible.add(n.user_id);
+    }
+  }
+
+  const nodes = allNodes.filter((n: any) => visible.has(n.user_id));
+  const edges = allEdges.filter((e: any) => visible.has(e.user_id) && visible.has(e.related_user_id));
 
   res.json({ nodes, edges });
 });
