@@ -21,9 +21,9 @@ RUN pnpm --filter giapha-server build
 # ─── Stage 2: Production runtime ─────────────────────────────────────────────
 FROM node:22-slim
 
-# Build tools cần cho native modules (better-sqlite3, sharp)
+# Build tools cho native modules + sqlite3 CLI để debug/admin trực tiếp
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
+    python3 make g++ sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g pnpm@10
