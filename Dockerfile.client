@@ -18,7 +18,8 @@ COPY client/ ./client/
 ARG VITE_SERVER_URL=""
 ENV VITE_SERVER_URL=${VITE_SERVER_URL}
 
-RUN pnpm --filter client exec vite build
+WORKDIR /build/client
+RUN node /build/node_modules/.bin/vite build
 
 # ─── Stage 2: Nginx serving static files ─────────────────────────────────────
 FROM nginx:1.27-alpine
