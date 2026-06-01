@@ -125,6 +125,17 @@ export interface Notification {
   created_at: string;
 }
 
+export interface Branch {
+  id: string;
+  name: string;
+  description: string | null;
+  root_user_id: string;
+  root_name: string;
+  root_avatar: string | null;
+  created_by: string;
+  created_at: string;
+}
+
 export interface FamilyEvent {
   id: string;
   title: string;

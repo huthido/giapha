@@ -82,6 +82,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_rel_req_from ON relationship_requests(from_user_id, status);
 `);
 
+// Migration: branches table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS branches (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    root_user_id TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (root_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by)   REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_branches_root ON branches(root_user_id);
+`);
+
 // Migration: events table
 db.exec(`
   CREATE TABLE IF NOT EXISTS events (

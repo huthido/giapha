@@ -142,6 +142,18 @@ CREATE TABLE IF NOT EXISTS calls (
   FOREIGN KEY (caller_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS branches (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  root_user_id TEXT NOT NULL,
+  created_by TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (root_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by)   REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_branches_root ON branches(root_user_id);
+
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,

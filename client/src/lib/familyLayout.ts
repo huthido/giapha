@@ -42,6 +42,53 @@ function addTo(m: Map<string, Set<string>>, k: string, v: string) {
   s.add(v);
 }
 
+/**
+ * Lọc cây gia phả theo nhánh: trả về tập con gồm rootUser và
+ * tất cả hậu duệ (đệ quy qua con) cùng vợ/chồng của họ.
+ * Không kéo theo tổ tiên hay người thân bên vợ/chồng.
+ */
+export function filterSubtree(
+  nodes: FamilyNode[],
+  edges: Relationship[],
+  rootUserId: string,
+): { nodes: FamilyNode[]; edges: Relationship[] } {
+  // Xây maps theo user_id
+  const childrenOf = new Map<string, Set<string>>();
+  const spouseOf   = new Map<string, Set<string>>();
+
+  for (const e of edges) {
+    const t = e.relation_type;
+    if (CHILD_TYPES.has(t)) {
+      let s = childrenOf.get(e.user_id); if (!s) { s = new Set(); childrenOf.set(e.user_id, s); } s.add(e.related_user_id);
+    } else if (PARENT_TYPES.has(t)) {
+      let s = childrenOf.get(e.related_user_id); if (!s) { s = new Set(); childrenOf.set(e.related_user_id, s); } s.add(e.user_id);
+    } else if (SPOUSE_TYPES.has(t)) {
+      let s = spouseOf.get(e.user_id); if (!s) { s = new Set(); spouseOf.set(e.user_id, s); } s.add(e.related_user_id);
+    }
+  }
+
+  // Phase 1: BFS chỉ theo chiều con → hậu duệ
+  const descendants = new Set<string>([rootUserId]);
+  const queue = [rootUserId];
+  while (queue.length) {
+    const uid = queue.shift()!;
+    for (const ch of childrenOf.get(uid) ?? []) {
+      if (!descendants.has(ch)) { descendants.add(ch); queue.push(ch); }
+    }
+  }
+
+  // Phase 2: thêm vợ/chồng của mỗi hậu duệ
+  const included = new Set(descendants);
+  for (const uid of descendants) {
+    for (const sp of spouseOf.get(uid) ?? []) included.add(sp);
+  }
+
+  return {
+    nodes: nodes.filter(n => included.has(n.user_id)),
+    edges: edges.filter(e => included.has(e.user_id) && included.has(e.related_user_id)),
+  };
+}
+
 export function computeFamilyLayout(nodes: FamilyNode[], edges: Relationship[]): FamilyLayout {
   const nodeById = new Map(nodes.map(n => [n.id, n]));
 
