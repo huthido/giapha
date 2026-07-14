@@ -8,7 +8,7 @@
     "typecheck": "pnpm --filter ./server typecheck && pnpm --filter ./client typecheck",
     "lint": "pnpm --filter ./client lint",
     "start": "node server/dist/index.js",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
