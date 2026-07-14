@@ -5,12 +5,26 @@
   "scripts": {
     "dev": "concurrently --names \"SERVER,CLIENT\" --prefix-colors \"yellow,cyan\" \"pnpm --filter ./server dev\" \"pnpm --filter ./client dev\"",
     "build": "pnpm --filter ./server build && pnpm --filter ./client build",
-    "start": "node server/dist/index.js"
+    "typecheck": "pnpm --filter ./server typecheck && pnpm --filter ./client typecheck",
+    "lint": "pnpm --filter ./client lint",
+    "start": "node server/dist/index.js",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7"
+  },
+  "lint-staged": {
+    "client/src/**/*.{ts,tsx}": [
+      "pnpm --filter ./client exec eslint --max-warnings=0"
+    ]
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "sharp"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "sharp"
+    ]
   }
 }
