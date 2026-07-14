@@ -14,6 +14,13 @@ services:
     restart: unless-stopped
     networks:
       - app
+    healthcheck:
+      # nginx:alpine có sẵn wget (busybox)
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
   # ── Server: Node.js API ───────────────────────────────────────────────────
   server:
@@ -31,7 +38,8 @@ services:
     networks:
       - app
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5109/api/health"]
+      # node:22-slim không có wget/curl → dùng fetch của Node
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5109/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
