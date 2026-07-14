@@ -32,6 +32,9 @@ services:
       - .env
     environment:
       NODE_ENV: production
+      # Ưu tiên IPv4 khi gọi ra ngoài (OAuth token exchange với Google/Facebook)
+      # — tránh treo khi VPS không route được IPv6
+      NODE_OPTIONS: --dns-result-order=ipv4first
     volumes:
       - server_data:/app/data        # SQLite database
       - server_uploads:/app/uploads  # Local fallback (khi Garage chưa cấu hình)

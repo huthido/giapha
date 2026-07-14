@@ -31,7 +31,9 @@ services:
       - "3903:3903"   # Admin
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3903/health"]
+      # Image garage không có wget/shell — dùng chính binary garage,
+      # `garage status` exit 0 khi daemon phản hồi RPC
+      test: ["CMD", "/garage", "status"]
       interval: 15s
       timeout: 5s
       retries: 5
