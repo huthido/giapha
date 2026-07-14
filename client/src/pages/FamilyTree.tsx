@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Users, Bell, Baby, GitFork, SearchCode, UserPlus, Share2, Search, X } from 'lucide-react';
+import { Plus, Users, Bell, IdCard, GitFork, SearchCode, UserPlus, Share2, Search, X } from 'lucide-react';
 import { AppLayout } from '../components/layout/AppLayout';
 import { TreeCanvas } from '../components/family-tree/TreeCanvas';
 import { AddMemberModal } from '../components/family-tree/AddMemberModal';
 import { RelationRequestsModal } from '../components/family-tree/RelationRequestsModal';
-import { CreateChildModal } from '../components/family-tree/CreateChildModal';
+import { CreateRelativeModal } from '../components/family-tree/CreateRelativeModal';
 import { BranchManager } from '../components/family-tree/BranchManager';
 import { RelationFinder } from '../components/family-tree/RelationFinder';
 import { InviteModal } from '../components/family-tree/InviteModal';
@@ -22,7 +22,7 @@ export function FamilyTree() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
-  const [showCreateChild, setShowCreateChild] = useState(false);
+  const [showCreateRelative, setShowCreateRelative] = useState(false);
   const [showBranchManager, setShowBranchManager] = useState(false);
   const [showRelationFinder, setShowRelationFinder] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -210,10 +210,11 @@ export function FamilyTree() {
               )}
             </button>
 
-            <button onClick={() => setShowCreateChild(true)}
+            <button onClick={() => setShowCreateRelative(true)}
+              title="Tạo tài khoản cho người thân"
               className={`${btnClass} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}>
-              <Baby size={16} />
-              <span className="hidden sm:inline">Tạo tài khoản con</span>
+              <IdCard size={16} />
+              <span className="hidden sm:inline">Tạo tài khoản người thân</span>
             </button>
 
             <button onClick={() => setShowAddModal(true)}
@@ -253,15 +254,15 @@ export function FamilyTree() {
               <div className="text-center px-6">
                 <p className="text-5xl mb-4">🌳</p>
                 <p className="text-gray-600 dark:text-gray-300 font-medium mb-2">Cây gia phả trống</p>
-                <p className="text-gray-400 dark:text-gray-500 text-sm mb-5">Thêm quan hệ hoặc tạo tài khoản cho con để bắt đầu</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm mb-5">Thêm quan hệ hoặc tạo tài khoản cho người thân để bắt đầu</p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button onClick={() => setShowAddModal(true)}
                     className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-colors min-h-[48px]">
                     <Plus size={16} /> Thêm quan hệ
                   </button>
-                  <button onClick={() => setShowCreateChild(true)}
+                  <button onClick={() => setShowCreateRelative(true)}
                     className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium transition-colors min-h-[48px]">
-                    <Baby size={16} /> Tạo tài khoản con
+                    <IdCard size={16} /> Tạo tài khoản người thân
                   </button>
                 </div>
               </div>
@@ -285,7 +286,7 @@ export function FamilyTree() {
       <InviteModal open={showInvite} onClose={() => setShowInvite(false)} />
       <AddMemberModal open={showAddModal} onClose={() => setShowAddModal(false)} onAdded={loadTree} existingNodes={nodes} />
       <RelationRequestsModal open={showRequests} onClose={() => setShowRequests(false)} onAccepted={() => { loadTree(); loadPendingCount(); }} />
-      <CreateChildModal open={showCreateChild} onClose={() => setShowCreateChild(false)} onCreated={loadTree} />
+      <CreateRelativeModal open={showCreateRelative} onClose={() => setShowCreateRelative(false)} onCreated={loadTree} />
       <RelationFinder open={showRelationFinder} onClose={() => setShowRelationFinder(false)} nodes={nodes} />
       <BranchManager
         open={showBranchManager}

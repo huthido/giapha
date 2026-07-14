@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { ChangeEvent } from 'react';
-import { Camera, Edit2, Save, X, MessageCircle, Phone, Video, Baby, MapPin, Briefcase, Heart } from 'lucide-react';
+import { Camera, Edit2, Save, X, MessageCircle, Phone, Video, Baby, MapPin, Briefcase, Heart, KeyRound } from 'lucide-react';
 import type { User } from '../../types';
 import { Avatar } from '../ui/Avatar';
 import { ProfileEditForm } from './ProfileEditForm';
@@ -27,18 +27,19 @@ interface ProfileHeaderProps {
   onChat: () => void;
   onAudioCall: () => void;
   onVideoCall: () => void;
+  onGrantLogin?: () => void;  // hiện nút cấp đăng nhập cho tài khoản được quản lý
 }
 
 export function ProfileHeader({
   profile, isMe, isManagedByMe = false, isOnline, editing, form, onFormChange,
   onSave, onEditToggle, onCancelEdit,
   onAvatarUpload, onCoverUpload,
-  onChat, onAudioCall, onVideoCall,
+  onChat, onAudioCall, onVideoCall, onGrantLogin,
 }: ProfileHeaderProps) {
   const avatarRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
 
-  const pickFile = (_ref: React.RefObject<HTMLInputElement | null>, cb: (f: File) => void) =>
+  const pickFile = (cb: (f: File) => void) =>
     (e: ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) cb(f); e.target.value = ''; };
 
   return (
@@ -54,7 +55,7 @@ export function ProfileHeader({
             <Camera size={12} /> Đổi ảnh bìa
           </button>
         )}
-        <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={pickFile(coverRef, onCoverUpload)} />
+        <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={pickFile(onCoverUpload)} />
       </div>
 
       <div className="px-5 pt-4 pb-5">
@@ -69,7 +70,7 @@ export function ProfileHeader({
                 <Camera size={18} className="text-white" />
               </button>
             )}
-            <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={pickFile(avatarRef, onAvatarUpload)} />
+            <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={pickFile(onAvatarUpload)} />
           </div>
 
           {/* Actions */}
@@ -87,10 +88,18 @@ export function ProfileHeader({
                   </button>
                 </>
               ) : (
-                <button onClick={onEditToggle}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors">
-                  <Edit2 size={14} /> Chỉnh sửa
-                </button>
+                <>
+                  {onGrantLogin && (
+                    <button onClick={onGrantLogin}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors">
+                      <KeyRound size={14} /> Cấp đăng nhập
+                    </button>
+                  )}
+                  <button onClick={onEditToggle}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors">
+                    <Edit2 size={14} /> Chỉnh sửa
+                  </button>
+                </>
               )
             ) : (
               <>
@@ -133,7 +142,7 @@ export function ProfileHeader({
               )}
               {profile.managed_by && (
                 <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">
-                  <Baby size={10} /> Tài khoản con
+                  <Baby size={10} /> Tài khoản được quản lý
                 </span>
               )}
             </div>

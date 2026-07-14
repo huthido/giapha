@@ -95,7 +95,7 @@ function MemberRow({ member, isSelf, adminCount, onRoleChange, onDelete }: {
           {member.occupation && <span>💼 {member.occupation}</span>}
           {member.address    && <span>📍 {member.address}</span>}
           <span className="text-gray-400 dark:text-gray-600">Tham gia: {formatDate(member.created_at)}</span>
-          {member.managed_by && <span className="text-blue-400">Tài khoản con</span>}
+          {member.managed_by && <span className="text-blue-400">Tài khoản được quản lý</span>}
         </div>
       )}
     </div>
@@ -113,9 +113,9 @@ export function Admin() {
   useEffect(() => {
     api.get<Member[]>('/users')
       .then(setMembers)
-      .catch((e: any) => showToast(e.message, 'error'))
+      .catch((e: Error) => showToast(e.message, 'error'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [showToast]);
 
   const adminCount = members.filter(m => m.role === 'admin').length;
 
@@ -124,7 +124,7 @@ export function Admin() {
       await api.put(`/users/${id}/role`, { role });
       setMembers(prev => prev.map(m => m.id === id ? { ...m, role } : m));
       showToast(role === 'admin' ? 'Đã cấp quyền admin' : 'Đã thu hồi quyền admin', 'success');
-    } catch (e: any) { showToast(e.message, 'error'); }
+    } catch (e) { showToast((e as Error).message, 'error'); }
   };
 
   const deleteMember = async (id: string, name: string) => {
@@ -133,7 +133,7 @@ export function Admin() {
       await api.delete(`/users/${id}`);
       setMembers(prev => prev.filter(m => m.id !== id));
       showToast(`Đã xóa tài khoản ${name}`, 'success');
-    } catch (e: any) { showToast(e.message, 'error'); }
+    } catch (e) { showToast((e as Error).message, 'error'); }
   };
 
   const filtered = members

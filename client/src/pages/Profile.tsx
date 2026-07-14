@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
+import { GrantLoginModal } from '../components/profile/GrantLoginModal';
 import { PostCard } from '../components/feed/PostCard';
 import { Lightbox } from '../components/ui/Lightbox';
 import { api } from '../lib/api';
@@ -37,9 +38,14 @@ export function Profile() {
   const [form, setForm] = useState<FormData>({ name: '', bio: '', date_of_birth: '', death_date: '', phone: '', address: '', gender: '', hometown: '', occupation: '' });
   const [activeTab, setActiveTab] = useState<'posts' | 'photos'>('posts');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [showGrantLogin, setShowGrantLogin] = useState(false);
+
+  // Tài khoản được quản lý chưa có đăng nhập thật → người tạo có thể cấp email/mật khẩu
+  const canGrantLogin = isManagedByMe && !!profile?.email?.endsWith('@family.internal');
 
   useEffect(() => {
     if (!userId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset loading khi chuyển sang profile khác
     setLoading(true);
     api.get<User & { posts: Post[] }>(`/users/${userId}`)
       .then(data => {
@@ -58,7 +64,7 @@ export function Profile() {
       if (isMe) updateUser(updated);
       setEditing(false);
       showToast('Đã cập nhật hồ sơ', 'success');
-    } catch (err: any) { showToast(err.message, 'error'); }
+    } catch (err) { showToast((err as Error).message, 'error'); }
   };
 
   const handleAvatarUpload = async (file: File) => {
@@ -67,7 +73,7 @@ export function Profile() {
       const { url } = await api.upload<{ url: string }>(`/users/${userId}/avatar`, fd);
       setProfile(p => p ? { ...p, avatar: url } : p);
       if (isMe) updateUser({ ...me!, avatar: url });
-    } catch (err: any) { showToast(err.message, 'error'); }
+    } catch (err) { showToast((err as Error).message, 'error'); }
   };
 
   const handleCoverUpload = async (file: File) => {
@@ -75,7 +81,7 @@ export function Profile() {
     try {
       const { url } = await api.upload<{ url: string }>(`/users/${userId}/cover`, fd);
       setProfile(p => p ? { ...p, cover_photo: url } : p);
-    } catch (err: any) { showToast(err.message, 'error'); }
+    } catch (err) { showToast((err as Error).message, 'error'); }
   };
 
   const handleChat = async () => {
@@ -90,7 +96,7 @@ export function Profile() {
     try {
       const conv = await api.post<{ id: string }>('/conversations', { type: 'direct', memberIds: [profile.id] });
       callUser(profile.id, conv.id, type);
-    } catch (err: any) { showToast(err.message, 'error'); }
+    } catch (err) { showToast((err as Error).message, 'error'); }
   };
 
   if (loading) {
@@ -130,7 +136,18 @@ export function Profile() {
           onChat={handleChat}
           onAudioCall={() => handleCall('audio')}
           onVideoCall={() => handleCall('video')}
+          onGrantLogin={canGrantLogin ? () => setShowGrantLogin(true) : undefined}
         />
+
+        {profile && (
+          <GrantLoginModal
+            open={showGrantLogin}
+            onClose={() => setShowGrantLogin(false)}
+            userId={profile.id}
+            userName={profile.name}
+            onGranted={() => setProfile(p => p ? { ...p, email: undefined } : p)}
+          />
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 mb-4">

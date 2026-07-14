@@ -1,9 +1,13 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 import type { Server } from 'socket.io';
 import db from '../db/database';
 import { verifyJWT, isAdmin, AuthRequest } from '../middleware/auth';
 import { buildGraph, findPath, composePath } from '../lib/inferRelation';
+import { REVERSE, managedEmail, isManagedEmail } from '../lib/relations';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 let _io: Server | null = null;
 export function setFamilyIO(io: Server) { _io = io; }
@@ -453,6 +457,85 @@ router.post('/children', verifyJWT, (req: AuthRequest, res: Response): void => {
 
   _io?.emit('family:updated');
   res.status(201).json({ ok: true, child_id: childId });
+});
+
+// ── Tạo tài khoản cho người thân ─────────────────────────────────────────────
+
+// POST /family/relatives — tạo tài khoản cho người thân bất kỳ.
+// Có email + password → tài khoản đăng nhập được ngay; không có → hồ sơ được quản lý
+// (giống /children) và có thể cấp đăng nhập sau qua PUT /relatives/:userId/credentials.
+router.post('/relatives', verifyJWT, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { name, relation_type, date_of_birth, gender, email, password } = req.body as {
+    name?: string; relation_type?: string; date_of_birth?: string;
+    gender?: string; email?: string; password?: string;
+  };
+  if (!name?.trim() || !relation_type) {
+    res.status(400).json({ error: 'Thiếu tên hoặc loại quan hệ' }); return;
+  }
+
+  const relativeId = uuidv4();
+  let finalEmail: string;
+  let passwordHash: string;
+
+  if (email) {
+    if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
+      res.status(400).json({ error: 'Email không hợp lệ' }); return;
+    }
+    if (typeof password !== 'string' || password.length < 8) {
+      res.status(400).json({ error: 'Mật khẩu phải có ít nhất 8 ký tự' }); return;
+    }
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing) { res.status(409).json({ error: 'Email đã được sử dụng' }); return; }
+    finalEmail = email;
+    passwordHash = await bcrypt.hash(password, 10);
+  } else {
+    finalEmail = managedEmail(relativeId);
+    passwordHash = `__managed__${relativeId}`;
+  }
+
+  db.prepare(`
+    INSERT INTO users (id, name, email, password, role, date_of_birth, gender, managed_by)
+    VALUES (?, ?, ?, ?, 'member', ?, ?, ?)
+  `).run(relativeId, name.trim(), finalEmail, passwordHash, date_of_birth ?? null, gender ?? null, req.userId);
+  db.prepare('INSERT INTO family_nodes (id, user_id, generation, pos_x, pos_y) VALUES (?, ?, 0, 0, 0)')
+    .run(uuidv4(), relativeId);
+
+  db.prepare('INSERT OR IGNORE INTO relationships (id, user_id, related_user_id, relation_type) VALUES (?, ?, ?, ?)')
+    .run(uuidv4(), req.userId, relativeId, relation_type);
+  const reverse = REVERSE[relation_type] ?? relation_type;
+  db.prepare('INSERT OR IGNORE INTO relationships (id, user_id, related_user_id, relation_type) VALUES (?, ?, ?, ?)')
+    .run(uuidv4(), relativeId, req.userId, reverse);
+
+  _io?.emit('family:updated');
+  res.status(201).json({ ok: true, user_id: relativeId, can_login: !!email });
+});
+
+// PUT /family/relatives/:userId/credentials — cấp email + mật khẩu cho tài khoản
+// được quản lý (chỉ người tạo hoặc admin; không dùng được để đổi mật khẩu tài khoản thật).
+router.put('/relatives/:userId/credentials', verifyJWT, async (req: AuthRequest, res: Response): Promise<void> => {
+  const target = db.prepare('SELECT id, email, managed_by FROM users WHERE id = ?')
+    .get(req.params.userId) as { id: string; email: string; managed_by: string | null } | undefined;
+  if (!target) { res.status(404).json({ error: 'Không tìm thấy người dùng' }); return; }
+  if (target.managed_by !== req.userId && !isAdmin(req.userId)) {
+    res.status(403).json({ error: 'Không có quyền' }); return;
+  }
+  if (!isManagedEmail(target.email)) {
+    res.status(400).json({ error: 'Tài khoản này đã có thông tin đăng nhập' }); return;
+  }
+
+  const { email, password } = req.body as { email?: string; password?: string };
+  if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
+    res.status(400).json({ error: 'Email không hợp lệ' }); return;
+  }
+  if (typeof password !== 'string' || password.length < 8) {
+    res.status(400).json({ error: 'Mật khẩu phải có ít nhất 8 ký tự' }); return;
+  }
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing) { res.status(409).json({ error: 'Email đã được sử dụng' }); return; }
+
+  const hashed = await bcrypt.hash(password, 10);
+  db.prepare('UPDATE users SET email = ?, password = ? WHERE id = ?').run(email, hashed, target.id);
+  res.json({ ok: true });
 });
 
 router.put('/nodes/:id/generation', verifyJWT, (req: AuthRequest, res: Response): void => {
